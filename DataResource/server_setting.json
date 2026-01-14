@@ -1,0 +1,12 @@
+﻿{
+  "host": "localhost",
+  "port": 9200,
+  "ma_route": "api/v1/moving_averages",
+  "oscillator_route": "api/v1/oscillators",
+  "pivot_route": "api/v1/pivots",  
+  "summary_route": "api/v1/summary",
+  "test_ma_route": "api/test/moving_averages",
+  "test_oscillator_route": "api/test/oscillators",
+  "test_pivot_route": "api/test/pivots",
+  "test_summary_route": "api/test/summary"
+}
