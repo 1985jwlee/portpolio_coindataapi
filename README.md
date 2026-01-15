@@ -72,43 +72,74 @@
 
 ### 전체 구성도
 
-```
-┌─────────────────────────┐
-│ External Data Sources   │
-│ (Binance WebSocket API) │
-└───────────┬─────────────┘
-            │
-            ↓
-┌─────────────────────────┐
-│ Ingestion Layer         │
-│ • WebSocket Client      │
-│ • Connection Management │
-│ • Rate Limiting         │
-└───────────┬─────────────┘
-            │
-            ↓
-┌─────────────────────────┐
-│ Normalization Layer     │
-│ • External → Internal   │
-│ • Indicator Calculation │
-│ • Schema Validation     │
-└───────────┬─────────────┘
-            │
-            ↓
-┌─────────────────────────┐
-│ API Server              │
-│ • REST Endpoints        │
-│ • Response Caching      │
-│ • Error Handling        │
-└───────────┬─────────────┘
-            │
-            ↓
-┌─────────────────────────┐
-│ Clients                 │
-│ • Trading Bots          │
-│ • Dashboard             │
-│ • Analytics Services    │
-└─────────────────────────┘
+```mermaid
+
+graph LR
+    subgraph "External Data Sources"
+        Binance[Binance API<br/>WebSocket]
+        Exchange2[Other Exchanges<br/>REST API]
+    end
+    
+    subgraph "Ingestion Layer"
+        SocketMgr[BinanceSocketKlineManager<br/>WebSocket Handler]
+        APIClient[REST API Client]
+    end
+    
+    subgraph "Normalization Layer"
+        Parser[Data Parser]
+        Validator[Data Validator]
+        Normalizer[Schema Normalizer<br/>→ Internal Format]
+    end
+    
+    subgraph "Internal Data Model"
+        KlineData[Kline Data<br/>Standardized]
+        Indicators[Technical Indicators<br/>RSI, MACD, etc]
+    end
+    
+    subgraph "Storage Layer"
+        Cache[(In-Memory Cache<br/>RxConcurrentDictionary)]
+        Persistence[(Persistent Storage)]
+    end
+    
+    subgraph "API Server"
+        WebServer[DataWebServer<br/>HTTP Endpoints]
+        Routes[API Routes]
+    end
+    
+    subgraph "DI Container"
+        Container[DIContainer<br/>Service Resolution]
+    end
+    
+    Binance -->|Raw Data| SocketMgr
+    Exchange2 -->|Raw Data| APIClient
+    
+    SocketMgr --> Parser
+    APIClient --> Parser
+    
+    Parser --> Validator
+    Validator --> Normalizer
+    
+    Normalizer --> KlineData
+    KlineData --> Indicators
+    
+    KlineData --> Cache
+    Indicators --> Cache
+    
+    Cache --> Persistence
+    
+    Cache --> WebServer
+    WebServer --> Routes
+    
+    Container -.->|Inject| SocketMgr
+    Container -.->|Inject| WebServer
+    Container -.->|Inject| Cache
+    
+    Routes -->|JSON Response| Client[API Client]
+    
+    style Normalizer fill:#4a90e2
+    style Cache fill:#f39c12
+    style WebServer fill:#2ecc71
+
 ```
 
 ---
