@@ -197,6 +197,18 @@ public class DataNormalizationService
 
 **외부 API 장애 시 서비스 연속성 보장**
 
+```mermaid
+flowchart TD
+    API[Market API] --> Manager[IExchangeKlineManager]
+
+    Manager -->|Implementation A| ExchangeA[Primary Exchange]
+    Manager -->|Implementation B| ExchangeB[Sub Exchange]
+    Manager -->|Implementation C| ExchangeC[Backup Exchange]
+
+    ExchangeA -. API Error / Invalid Data .-> Manager
+    Manager --> ExchangeB
+```
+
 ```csharp
 public class ResilientDataProvider
 {
