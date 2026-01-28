@@ -146,41 +146,69 @@ public class NewIndicator : TechnicalDataBase
 
 ### 전체 데이터 흐름
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   External Data Source                   │
-│                    Binance WebSocket                     │
-└─────────────────────┬───────────────────────────────────┘
-                      │ Raw Kline Data
-                      ↓
-┌─────────────────────────────────────────────────────────┐
-│              BinanceSocketKlineManager                   │
-│  - WebSocket 연결 관리                                    │
-│  - 재연결 로직                                            │
-│  - 데이터 Queue 관리                                       │
-└─────────────────────┬───────────────────────────────────┘
-                      │ IBinanceKline
-                      ↓
-┌─────────────────────────────────────────────────────────┐
-│              Technical Indicator Engine                  │
-│  RSI | MACD | Stochastic | ADX | CCI | ...              │
-└─────────────────────┬───────────────────────────────────┘
-                      │ Calculated Indicators
-                      ↓
-┌─────────────────────────────────────────────────────────┐
-│           RxConcurrentDictionary<Interval, Data>        │
-│  - In-Memory Cache                                       │
-│  - 1분마다 갱신                                           │
-└─────────────────────┬───────────────────────────────────┘
-                      │ JSON Response
-                      ↓
-┌─────────────────────────────────────────────────────────┐
-│                  DataWebServer (REST API)                │
-│  /api/v1/summary                                         │
-│  /api/v1/oscillators                                     │
-│  /api/v1/moving_averages                                │
-│  /api/v1/pivots                                          │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+
+graph TD
+    subgraph External_Data_Sources
+        Binance[Binance API<br/>WebSocket]
+        Exchange2[Other Exchanges<br/>REST API]
+    end
+
+    subgraph Ingestion_Layer
+        SocketMgr(BinanceSocketKlineManager<br/>WebSocket Handler)
+        APIClient(REST API Client)
+    end
+
+    subgraph Normalization_Layer
+        Parser(Data Parser)
+        Validator(Data Validator)
+        Normalizer(Schema Normalizer->Internal Format)
+    end
+
+    subgraph Internal_Data_Model
+        KlineData(Kline Data<br/>Standardized)
+        Indicators(Technical Indicators<br/>RSI, MACD, etc)
+    end
+
+    subgraph Storage_Layer
+        Cache[(In-Memory Cache<br/>RxConcurrentDictionary)]
+        Persistence[(Persistent Storage)]
+    end
+
+    subgraph API_Server
+        WebServer(DataWebServer<br/>HTTP Endpoints)
+        Routes(API Routes)
+    end
+
+    subgraph DI_Container
+        Container(DI Container<br/>Service Resolution)
+    end
+
+    Binance -->|Raw Data| SocketMgr
+    Exchange2 -->|Raw Data| APIClient
+
+    SocketMgr --> Parser
+    APIClient --> Parser
+
+    Parser --> Validator
+    Validator --> Normalizer
+
+    Normalizer --> KlineData
+    KlineData --> Indicators
+    KlineData --> Cache
+    Indicators --> Cache
+
+    Cache --> Persistence
+
+    Cache --> WebServer
+    WebServer --> Routes
+
+    Container -.->|Inject| SocketMgr
+    Container -.->|Inject| WebServer
+    Container -.->|Inject| Cache
+
+    Routes -->|JSON Response| Client(API Consumer)
+
 ```
 
 ---
